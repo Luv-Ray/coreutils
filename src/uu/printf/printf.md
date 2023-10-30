@@ -185,7 +185,7 @@ All string fields have a 'max width' parameter
 
 The character field does not have a secondary parameter.
 
-* `%c`: a single character
+* `%c`: a single character meta-characters
 
 #### INTEGER SUBSTITUTIONS
 
