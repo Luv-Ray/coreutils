@@ -27,7 +27,7 @@ use walkdir::{DirEntry, WalkDir};
 
 use crate::{
     aligned_ancestors, context_for, copy_attributes, copy_file, copy_link, CopyResult, Error,
-    Options,
+    FilePath, Options,
 };
 
 /// Ensure a Windows path starts with a `\\?`.
@@ -221,7 +221,7 @@ fn copy_direntry(
     options: &Options,
     symlinked_files: &mut HashSet<FileInformation>,
     preserve_hard_links: bool,
-    copied_destinations: &HashSet<PathBuf>,
+    copied_destinations: &HashSet<FilePath>,
     copied_files: &mut HashMap<FileInformation, PathBuf>,
 ) -> CopyResult<()> {
     let Entry {
@@ -328,7 +328,7 @@ pub(crate) fn copy_directory(
     target: &Path,
     options: &Options,
     symlinked_files: &mut HashSet<FileInformation>,
-    copied_destinations: &HashSet<PathBuf>,
+    copied_destinations: &HashSet<FilePath>,
     copied_files: &mut HashMap<FileInformation, PathBuf>,
     source_in_command_line: bool,
 ) -> CopyResult<()> {

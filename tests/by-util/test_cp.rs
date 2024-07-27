@@ -5716,3 +5716,24 @@ fn test_cp_with_options_backup_and_rem_when_dest_is_symlink() {
     assert!(!at.symlink_exists("inner_dir/sl"));
     assert_eq!(at.read("inner_dir/sl"), "xyz");
 }
+
+#[test]
+fn test_cp_path_canonicalize() {
+    let scene = TestScenario::new(util_name!());
+    let at = &scene.fixtures;
+    at.mkdir("a");
+    at.mkdir("b");
+    at.touch("a/file");
+    scene
+        .ucmd()
+        .args(&["a/file", "a/../a/file", "b"])
+        .succeeds()
+        .stderr_only(format!(
+            "cp: warning: source file '{}' specified more than once\n",
+            if cfg!(windows) {
+                "a\\..\\a\\file"
+            } else {
+                "a/../a/file"
+            }
+        ));
+}

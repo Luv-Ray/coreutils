@@ -1217,6 +1217,53 @@ fn show_error_if_needed(error: &Error) {
     }
 }
 
+/// Helper struct for hashing and comparing file paths.
+struct FilePath {
+    path: PathBuf,
+    metadata: CopyResult<Metadata>,
+}
+
+impl std::hash::Hash for FilePath {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.path.canonicalize().ok().hash(state);
+        let meta_data = self.metadata.as_ref();
+        meta_data.map(|file| file.file_type()).ok().hash(state);
+        meta_data.map(|file| file.len()).ok().hash(state);
+    }
+}
+
+impl FilePath {
+    pub fn new(path: PathBuf) -> Self {
+        let metadata = fs::symlink_metadata(&path).map_err(Into::into);
+        Self { path, metadata }
+    }
+}
+
+impl PartialEq for FilePath {
+    fn eq(&self, other: &Self) -> bool {
+        self.path.canonicalize().ok() == other.path.canonicalize().ok()
+    }
+}
+impl Eq for FilePath {}
+
+impl From<PathBuf> for FilePath {
+    fn from(value: PathBuf) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<&PathBuf> for FilePath {
+    fn from(value: &PathBuf) -> Self {
+        Self::new(value.clone())
+    }
+}
+
+impl From<&Path> for FilePath {
+    fn from(value: &Path) -> Self {
+        Self::new(value.to_path_buf())
+    }
+}
+
 /// Copy all `sources` to `target`.
 ///
 /// Returns an `Err(Error::NotAllFilesCopied)` if at least one non-fatal error
@@ -1228,7 +1275,7 @@ pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult
     verify_target_type(target, &target_type)?;
 
     let mut non_fatal_errors = false;
-    let mut seen_sources = HashSet::with_capacity(sources.len());
+    let mut seen_sources: HashSet<FilePath> = HashSet::with_capacity(sources.len());
     let mut symlinked_files = HashSet::new();
 
     // to remember the copied files for further usage.
@@ -1241,7 +1288,7 @@ pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult
     let mut copied_files: HashMap<FileInformation, PathBuf> = HashMap::with_capacity(sources.len());
     // remember the copied destinations for further usage.
     // we can't use copied_files as it is because the key is the source file's information.
-    let mut copied_destinations: HashSet<PathBuf> = HashSet::with_capacity(sources.len());
+    let mut copied_destinations: HashSet<FilePath> = HashSet::with_capacity(sources.len());
 
     let progress_bar = if options.progress_bar {
         let pb = ProgressBar::new(disk_usage(sources, options.recursive)?)
@@ -1259,8 +1306,7 @@ pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult
     };
 
     for source in sources {
-        if seen_sources.contains(source) {
-            // FIXME: compare sources by the actual file they point to, not their path. (e.g. dir/file == dir/../dir/file in most cases)
+        if seen_sources.contains(&source.into()) {
             show_warning!("source file {} specified more than once", source.quote());
         } else {
             let dest = construct_dest_path(source, target, target_type, options)
@@ -1269,7 +1315,7 @@ pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult
             if fs::metadata(&dest).is_ok() && !fs::symlink_metadata(&dest)?.file_type().is_symlink()
             {
                 // There is already a file and it isn't a symlink (managed in a different place)
-                if copied_destinations.contains(&dest)
+                if copied_destinations.contains(&dest.clone().into())
                     && options.backup != BackupMode::NumberedBackup
                 {
                     // If the target file was already created in this cp call, do not overwrite
@@ -1294,10 +1340,10 @@ pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult
                 show_error_if_needed(&error);
                 non_fatal_errors = true;
             } else {
-                copied_destinations.insert(dest.clone());
+                copied_destinations.insert(dest.into());
             }
         }
-        seen_sources.insert(source);
+        seen_sources.insert(source.into());
     }
 
     if let Some(pb) = progress_bar {
@@ -1353,7 +1399,7 @@ fn copy_source(
     target_type: TargetType,
     options: &Options,
     symlinked_files: &mut HashSet<FileInformation>,
-    copied_destinations: &HashSet<PathBuf>,
+    copied_destinations: &HashSet<FilePath>,
     copied_files: &mut HashMap<FileInformation, PathBuf>,
 ) -> CopyResult<()> {
     let source_path = Path::new(&source);
@@ -1993,7 +2039,7 @@ fn copy_file(
     dest: &Path,
     options: &Options,
     symlinked_files: &mut HashSet<FileInformation>,
-    copied_destinations: &HashSet<PathBuf>,
+    copied_destinations: &HashSet<FilePath>,
     copied_files: &mut HashMap<FileInformation, PathBuf>,
     source_in_command_line: bool,
 ) -> CopyResult<()> {
@@ -2014,7 +2060,7 @@ fn copy_file(
         // Fail if cp tries to copy two sources of the same name into a single symlink
         // Example: "cp file1 dir1/file1 tmp" where "tmp" is a directory containing a symlink "file1" pointing to a file named "foo".
         // foo will contain the contents of "file1" and "dir1/file1" will not be copied over to "tmp/file1"
-        if copied_destinations.contains(dest) {
+        if copied_destinations.contains(&dest.into()) {
             return Err(Error::Error(format!(
                 "will not copy '{}' through just-created symlink '{}'",
                 source.display(),
