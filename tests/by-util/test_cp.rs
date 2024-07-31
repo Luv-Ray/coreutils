@@ -2944,8 +2944,8 @@ fn test_abuse_existing() {
     at.write("t", "i");
     ucmd.args(&["-dR", "a/1", "b/1", "c"])
         .fails()
-        .stderr_contains(format!(
-            "will not copy 'b/1' through just-created symlink 'c{}1'",
+        .stderr_only(format!(
+            "cp: will not copy 'b/1' through just-created symlink 'c{}1'",
             if cfg!(windows) { "\\" } else { "/" }
         ));
     assert_eq!(at.read("t"), "i");
@@ -5715,4 +5715,57 @@ fn test_cp_with_options_backup_and_rem_when_dest_is_symlink() {
     assert!(at.symlink_exists("inner_dir/sl~"));
     assert!(!at.symlink_exists("inner_dir/sl"));
     assert_eq!(at.read("inner_dir/sl"), "xyz");
+}
+
+#[test]
+fn test_copy_symlink_overwrite() {
+    let (at, mut ucmd) = at_and_ucmd!();
+    at.mkdir("a");
+    at.mkdir("b");
+    at.mkdir("c");
+
+    at.write("t", "hello");
+    at.relative_symlink_file("../t", "a/1");
+    at.relative_symlink_file("../t", "b/1");
+
+    ucmd.arg("--no-dereference")
+        .arg("a/1")
+        .arg("b/1")
+        .arg("c")
+        .fails()
+        .stderr_only(if cfg!(not(target_os = "windows")) {
+            "cp: will not overwrite just-created 'c/1' with 'b/1'\n"
+        } else {
+            "cp: will not overwrite just-created 'c\\1' with 'b/1'\n"
+        });
+}
+
+#[test]
+fn test_symlink_mode_overwrite() {
+    let (at, mut ucmd) = at_and_ucmd!();
+    at.mkdir("a");
+    at.mkdir("b");
+
+    at.write("a/t", "hello");
+    at.write("b/t", "hello");
+
+    if cfg!(not(target_os = "windows")) {
+        ucmd.arg("-s")
+            .arg("a/t")
+            .arg("b/t")
+            .arg(".")
+            .fails()
+            .stderr_only("cp: will not overwrite just-created './t' with 'b/t'\n");
+
+        assert_eq!(at.read("./t"), "hello");
+    } else {
+        ucmd.arg("-s")
+            .arg("a\\t")
+            .arg("b\\t")
+            .arg(".")
+            .fails()
+            .stderr_only("cp: will not overwrite just-created '.\\t' with 'b\\t'\n");
+
+        assert_eq!(at.read(".\\t"), "hello");
+    }
 }

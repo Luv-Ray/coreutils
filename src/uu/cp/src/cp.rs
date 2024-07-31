@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 #[cfg(not(windows))]
 use std::ffi::CString;
-use std::fs::{self, File, Metadata, OpenOptions, Permissions};
+use std::fs::{self, File, FileType, Metadata, OpenOptions, Permissions};
 use std::io;
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
@@ -1266,11 +1266,35 @@ pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult
             let dest = construct_dest_path(source, target, target_type, options)
                 .unwrap_or_else(|_| target.to_path_buf());
 
-            if fs::metadata(&dest).is_ok() && !fs::symlink_metadata(&dest)?.file_type().is_symlink()
+            let source_meta = fs::symlink_metadata(source);
+            // Only regular files can be created by writing through symbolic
+            let follow_symlink = if source_meta.is_ok()
+                && !matches!(options.copy_mode, CopyMode::Link | CopyMode::SymLink)
+                && matches!(options.backup, BackupMode::NoBackup)
             {
+                let source_type = source_meta?.file_type();
+                source_type.is_file()
+                    || (options.recursive && options.copy_contents == false)
+                        && !source_type.is_dir()
+                        && !source_type.is_symlink()
+            } else {
+                false
+            };
+
+            let meta_data = if follow_symlink {
+                fs::metadata(&dest)
+            } else {
+                fs::symlink_metadata(&dest)
+            };
+
+            if meta_data.is_ok() {
+                let file_type = meta_data?.file_type();
                 // There is already a file and it isn't a symlink (managed in a different place)
+                // eprintln!("dest: {:?}", &dest);
                 if copied_destinations.contains(&dest)
                     && options.backup != BackupMode::NumberedBackup
+                    && !file_type.is_symlink()
+                    && !file_type.is_dir()
                 {
                     // If the target file was already created in this cp call, do not overwrite
                     return Err(Error::Error(format!(
