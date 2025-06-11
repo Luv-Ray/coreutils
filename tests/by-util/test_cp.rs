@@ -6272,6 +6272,29 @@ fn test_cp_from_stream() {
     assert_eq!(at.read(target), test_string2);
 }
 
+/// only unix has `/dev/fd/0`
+#[cfg(unix)]
+#[test]
+fn test_cp_from_stream_permission() {
+    let target = "target";
+    let link = "link";
+    let test_string = "Hello, World!\n";
+    let (at, mut ucmd) = at_and_ucmd!();
+
+    at.touch(target);
+    at.symlink_file(target, link);
+    let mode = 0o777;
+    at.set_mode("target", mode);
+
+    ucmd.arg("/dev/fd/0")
+        .arg(link)
+        .pipe_in(test_string)
+        .succeeds();
+
+    assert_eq!(at.read(target), test_string);
+    assert_eq!(at.metadata(target).permissions().mode(), 0o100777);
+}
+
 #[cfg(feature = "feat_selinux")]
 fn get_getfattr_output(f: &str) -> String {
     use std::process::Command;
