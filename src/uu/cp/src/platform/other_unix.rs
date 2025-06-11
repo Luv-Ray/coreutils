@@ -58,9 +58,6 @@ pub(crate) fn copy_on_write(
             .map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))
             .map_err(|e| CpError::IoErrContext(e, context.to_owned()))?;
 
-        if source_is_fifo {
-            dst_file.set_permissions(src_file.metadata()?.permissions())?;
-        }
         return Ok(copy_debug);
     }
 

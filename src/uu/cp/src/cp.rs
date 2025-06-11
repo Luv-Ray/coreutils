@@ -2618,8 +2618,6 @@ fn copy_helper(
             options.sparse_mode,
             context,
             #[cfg(unix)]
-            source_is_fifo,
-            #[cfg(unix)]
             source_is_stream,
         )?;
 
