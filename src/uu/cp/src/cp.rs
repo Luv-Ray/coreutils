@@ -2533,6 +2533,7 @@ fn is_stream(metadata: &Metadata) -> bool {
     }
     #[cfg(not(unix))]
     {
+        let _ = metadata;
         false
     }
 }
