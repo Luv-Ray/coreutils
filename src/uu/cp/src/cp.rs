@@ -836,6 +836,16 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             };
             set_exit_code(EXIT_ERR);
         }
+
+        #[cfg(target_os = "freebsd")]
+        println!(
+            "copy_source src permission: {:?}",
+            std::fs::File::open(target)
+                .unwrap()
+                .metadata()
+                .unwrap()
+                .permissions()
+        );
     }
 
     Ok(())
@@ -1494,6 +1504,7 @@ fn copy_source(
     copied_destinations: &HashSet<PathBuf>,
     copied_files: &mut HashMap<FileInformation, PathBuf>,
 ) -> CopyResult<()> {
+    #[cfg(target_os = "freebsd")]
     println!(
         "copy_source src permission: {:?}",
         std::fs::File::open(source)
@@ -2116,6 +2127,7 @@ fn handle_copy_mode(
     source_is_fifo: bool,
     #[cfg(unix)] source_is_stream: bool,
 ) -> CopyResult<PerformedAction> {
+    #[cfg(target_os = "freebsd")]
     println!(
         "handle_copy_mode src permission: {:?}",
         std::fs::File::open(source)
@@ -2321,6 +2333,7 @@ fn copy_file(
     copied_files: &mut HashMap<FileInformation, PathBuf>,
     source_in_command_line: bool,
 ) -> CopyResult<()> {
+    #[cfg(target_os = "freebsd")]
     println!(
         "copy_file src permission: {:?}",
         std::fs::File::open(source)
