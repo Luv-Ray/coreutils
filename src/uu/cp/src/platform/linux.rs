@@ -253,12 +253,9 @@ where
         .open(&dest)?;
 
     let dest_filetype = dst_file.metadata()?.file_type();
-    #[cfg(unix)]
     let dest_is_stream = dest_filetype.is_fifo()
         || dest_filetype.is_char_device()
         || dest_filetype.is_block_device();
-    #[cfg(not(unix))]
-    let dest_is_stream = false;
 
     if !dest_is_stream {
         // `copy_stream` doesn't clear the dest file, if dest is not a stream, we should clear it manually.
