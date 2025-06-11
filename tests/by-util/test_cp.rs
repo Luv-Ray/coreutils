@@ -6292,7 +6292,7 @@ fn test_cp_from_stream_permission() {
         .succeeds();
 
     assert_eq!(at.read(target), test_string);
-    assert_eq!(at.metadata(target).permissions().mode(), 0o100777);
+    assert_eq!(at.metadata(target).permissions().mode(), 0o100_777);
 }
 
 #[cfg(feature = "feat_selinux")]
