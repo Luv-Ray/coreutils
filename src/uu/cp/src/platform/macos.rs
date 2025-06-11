@@ -6,6 +6,7 @@
 use std::ffi::CString;
 use std::fs::{self, File, OpenOptions};
 use std::os::unix::ffi::OsStrExt;
+use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
@@ -102,6 +103,19 @@ pub(crate) fn copy_on_write(
                         .write(true)
                         .mode(mode)
                         .open(dest)?;
+
+                    let dest_filetype = dst_file.metadata()?.file_type();
+                    #[cfg(unix)]
+                    let dest_is_stream = dest_filetype.is_fifo()
+                        || dest_filetype.is_char_device()
+                        || dest_filetype.is_block_device();
+                    #[cfg(not(unix))]
+                    let dest_is_stream = false;
+
+                    if !dest_is_stream {
+                        // `copy_stream` doesn't clear the dest file, if dest is not a stream, we should clear it manually.
+                        dst_file.set_len(0)?;
+                    }
 
                     let context = buf_copy::copy_stream(&mut src_file, &mut dst_file)
                         .map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))

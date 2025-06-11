@@ -6247,6 +6247,31 @@ fn test_cp_update_none_interactive_prompt_no() {
     assert_eq!(at.read(new_file), "new content");
 }
 
+/// only unix has `/dev/fd/0`
+#[cfg(unix)]
+#[test]
+fn test_cp_from_stream() {
+    let target = "target";
+    let test_string1 = "longer: Hello, World!\n";
+    let test_string2 = "shorter";
+    let scenario = TestScenario::new(util_name!());
+    let at = &scenario.fixtures;
+
+    let mut ucmd = scenario.ucmd();
+    ucmd.arg("/dev/fd/0")
+        .arg(target)
+        .pipe_in(test_string1)
+        .succeeds();
+    assert_eq!(at.read(target), test_string1);
+
+    let mut ucmd = scenario.ucmd();
+    ucmd.arg("/dev/fd/0")
+        .arg(target)
+        .pipe_in(test_string2)
+        .succeeds();
+    assert_eq!(at.read(target), test_string2);
+}
+
 #[cfg(feature = "feat_selinux")]
 fn get_getfattr_output(f: &str) -> String {
     use std::process::Command;
