@@ -2526,15 +2526,15 @@ fn copy_file(
 }
 
 fn is_stream(metadata: &Metadata) -> bool {
-    let file_type = metadata.file_type();
-
     #[cfg(unix)]
-    let source_is_stream =
-        file_type.is_fifo() || file_type.is_char_device() || file_type.is_block_device();
+    {
+        let file_type = metadata.file_type();
+        file_type.is_fifo() || file_type.is_char_device() || file_type.is_block_device()
+    }
     #[cfg(not(unix))]
-    let source_is_stream = false;
-
-    source_is_stream
+    {
+        false
+    }
 }
 
 #[cfg(unix)]
