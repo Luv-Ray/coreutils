@@ -4,7 +4,6 @@
 // file that was distributed with this source code.
 // spell-checker:ignore reflink
 use std::fs::{self, File, OpenOptions};
-use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
