@@ -18,6 +18,7 @@ use uucore::mode::get_umask;
 
 use crate::{
     CopyDebug, CopyResult, CpError, OffloadReflinkDebug, ReflinkMode, SparseDebug, SparseMode,
+    is_stream,
 };
 
 /// The fallback behavior for [`clone`] on failed system call.
@@ -252,11 +253,7 @@ where
         .mode(mode)
         .open(&dest)?;
 
-    let dest_filetype = dst_file.metadata()?.file_type();
-    let dest_is_stream = dest_filetype.is_fifo()
-        || dest_filetype.is_char_device()
-        || dest_filetype.is_block_device();
-
+    let dest_is_stream = is_stream(&dst_file.metadata()?);
     if !dest_is_stream {
         // `copy_stream` doesn't clear the dest file, if dest is not a stream, we should clear it manually.
         dst_file.set_len(0)?;

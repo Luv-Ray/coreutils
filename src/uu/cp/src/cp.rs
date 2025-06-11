@@ -2458,12 +2458,7 @@ fn copy_file(
     #[cfg(not(unix))]
     let source_is_fifo = false;
 
-    #[cfg(unix)]
-    let source_is_stream = source_is_fifo
-        || source_metadata.file_type().is_char_device()
-        || source_metadata.file_type().is_block_device();
-    #[cfg(not(unix))]
-    let source_is_stream = false;
+    let source_is_stream = is_stream(&source_metadata);
 
     let performed_action = handle_copy_mode(
         source,
@@ -2528,6 +2523,18 @@ fn copy_file(
     }
 
     Ok(())
+}
+
+fn is_stream(metadata: &Metadata) -> bool {
+    let file_type = metadata.file_type();
+
+    #[cfg(unix)]
+    let source_is_stream =
+        file_type.is_fifo() || file_type.is_char_device() || file_type.is_block_device();
+    #[cfg(not(unix))]
+    let source_is_stream = false;
+
+    source_is_stream
 }
 
 #[cfg(unix)]
