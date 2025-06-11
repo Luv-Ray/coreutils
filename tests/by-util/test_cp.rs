@@ -6258,17 +6258,70 @@ fn test_cp_from_stream() {
     let at = &scenario.fixtures;
 
     let mut ucmd = scenario.ucmd();
-    ucmd.arg("/dev/fd/0")
+    let res = ucmd
+        .arg("/dev/fd/0")
+        .arg(target)
+        .pipe_in(test_string1)
+        .succeeds()
+        .no_stdout();
+    assert_eq!(at.read(target), test_string1);
+
+    let mut ucmd = scenario.ucmd();
+    let res = ucmd
+        .arg("/dev/fd/0")
+        .arg(target)
+        .pipe_in(test_string2)
+        .succeeds()
+        .no_stdout();
+    assert_eq!(at.read(target), test_string2);
+}
+
+#[test]
+fn test_freebsd() {
+    println!(
+        "src permission: {:?}",
+        std::fs::File::open("/dev/fd/0")
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
+
+    panic!(
+        "{:?}",
+        std::fs::File::open("/dev/fd/0")
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
+}
+
+/// only unix has `/dev/fd/0`
+#[cfg(unix)]
+#[test]
+fn test_cp_from_stream1() {
+    let target = "target";
+    let test_string1 = "longer: Hello, World!\n";
+    let test_string2 = "shorter";
+    let scenario = TestScenario::new(util_name!());
+    let at = &scenario.fixtures;
+
+    let mut ucmd = scenario.ucmd();
+    let res = ucmd
+        .arg("/dev/fd/0")
         .arg(target)
         .pipe_in(test_string1)
         .succeeds();
     assert_eq!(at.read(target), test_string1);
 
     let mut ucmd = scenario.ucmd();
-    ucmd.arg("/dev/fd/0")
+    let res = ucmd
+        .arg("/dev/fd/0")
         .arg(target)
         .pipe_in(test_string2)
-        .succeeds();
+        .fails()
+        .no_stdout();
     assert_eq!(at.read(target), test_string2);
 }
 

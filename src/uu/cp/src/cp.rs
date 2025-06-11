@@ -1494,6 +1494,15 @@ fn copy_source(
     copied_destinations: &HashSet<PathBuf>,
     copied_files: &mut HashMap<FileInformation, PathBuf>,
 ) -> CopyResult<()> {
+    println!(
+        "copy_source src permission: {:?}",
+        std::fs::File::open(source)
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
+
     let source_path = Path::new(&source);
     if source_path.is_dir() {
         // Copy as directory
@@ -2107,6 +2116,15 @@ fn handle_copy_mode(
     source_is_fifo: bool,
     #[cfg(unix)] source_is_stream: bool,
 ) -> CopyResult<PerformedAction> {
+    println!(
+        "handle_copy_mode src permission: {:?}",
+        std::fs::File::open(source)
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
+
     let source_is_symlink = source_metadata.is_symlink();
 
     match options.copy_mode {
@@ -2303,6 +2321,15 @@ fn copy_file(
     copied_files: &mut HashMap<FileInformation, PathBuf>,
     source_in_command_line: bool,
 ) -> CopyResult<()> {
+    println!(
+        "copy_file src permission: {:?}",
+        std::fs::File::open(source)
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
+
     let source_is_symlink = source.is_symlink();
     let dest_is_symlink = dest.is_symlink();
     // Fail if dest is a dangling symlink or a symlink this program created previously

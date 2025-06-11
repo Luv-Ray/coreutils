@@ -24,6 +24,15 @@ pub(crate) fn copy_on_write(
     context: &str,
     source_is_stream: bool,
 ) -> CopyResult<CopyDebug> {
+    println!(
+        "cow src permission: {:?}",
+        std::fs::File::open(source)
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
+
     if reflink_mode != ReflinkMode::Never {
         return Err("--reflink is only supported on linux and macOS"
             .to_string()
@@ -40,6 +49,7 @@ pub(crate) fn copy_on_write(
 
     if source_is_stream {
         let mut src_file = File::open(source)?;
+        println!("src permission: {:?}", src_file.metadata()?.permissions());
         let mode = 0o622 & !get_umask();
         let mut dst_file = OpenOptions::new()
             .create(true)
@@ -53,6 +63,7 @@ pub(crate) fn copy_on_write(
             dst_file.set_len(0)?;
         }
 
+        println!("src permission: {:?}", src_file.metadata()?.permissions());
         buf_copy::copy_stream(&mut src_file, &mut dst_file)
             .map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))
             .map_err(|e| CpError::IoErrContext(e, context.to_owned()))?;
