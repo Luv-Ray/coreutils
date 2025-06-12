@@ -2340,6 +2340,13 @@ fn copy_file(
     copied_files: &mut HashMap<FileInformation, PathBuf>,
     source_in_command_line: bool,
 ) -> CopyResult<()> {
+    let p1 = fs::metadata(source).unwrap().permissions();
+    let p2 = fs::File::open(source)
+        .unwrap()
+        .metadata()
+        .unwrap()
+        .permissions();
+    assert_eq!(p1, p2);
     #[cfg(target_os = "freebsd")]
     println!(
         "copy_file src permission: {:?}",

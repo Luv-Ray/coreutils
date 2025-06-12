@@ -118,17 +118,10 @@ fn test_cp_from_stream() {
 
 #[test]
 fn test_freebsd() {
+    let m = std::fs::metadata("/dev/fd/0").unwrap();
+    println!("{:?}", m.permissions());
     println!(
         "src permission: {:?}",
-        std::fs::File::open("/dev/fd/0")
-            .unwrap()
-            .metadata()
-            .unwrap()
-            .permissions()
-    );
-
-    panic!(
-        "{:?}",
         std::fs::File::open("/dev/fd/0")
             .unwrap()
             .metadata()
