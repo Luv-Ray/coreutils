@@ -1359,6 +1359,7 @@ fn show_error_if_needed(error: &CpError) {
 ///
 /// Behavior is determined by the `options` parameter, see [`Options`] for details.
 pub fn copy(sources: &[PathBuf], target: &Path, options: &Options) -> CopyResult<()> {
+    // mode: 0o100555 (-r-xr-xr-x)
     let target_type = TargetType::determine(sources, target);
     verify_target_type(target, &target_type)?;
 
@@ -2302,6 +2303,12 @@ fn calculate_dest_permissions(
             use uucore::mode::get_umask;
             let mode = mode & !get_umask();
             permissions.set_mode(mode);
+
+            #[cfg(target_os = "freebsd")]
+            println!(
+                "calculate_dest_permissions src permission: {:?}, dest permission: {}",
+                permissions, mode,
+            );
             Ok(permissions)
         }
         #[cfg(not(unix))]
@@ -2561,6 +2568,16 @@ fn copy_file(
     if let Some(progress_bar) = progress_bar {
         progress_bar.inc(fs::metadata(source)?.len());
     }
+
+    #[cfg(target_os = "freebsd")]
+    println!(
+        "copy_file end dest permission: {:?}",
+        std::fs::File::open(dest)
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .permissions()
+    );
 
     Ok(())
 }
